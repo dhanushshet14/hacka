@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aetherion-config
+  namespace: aetherion
+data:
+  API_DEBUG: "false"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  API_PROJECT_NAME: "Aetherion AR Backend"
+  CORS_ORIGINS: "http://localhost:3000,https://aetherion-ar.example.com"
+  LOG_LEVEL: "info" 

@@ -1,0 +1,45 @@
+apiVersion: skaffold/v2beta28
+kind: Config
+metadata:
+  name: aetherion-ar
+build:
+  artifacts:
+  - image: aetherion-backend
+    context: backend
+    docker:
+      dockerfile: Dockerfile
+deploy:
+  kubectl:
+    manifests:
+    - k8s/00-namespace.yaml
+    - k8s/01-configmap.yaml
+    - k8s/02-secrets.yaml
+    - k8s/03-mongodb.yaml
+    - k8s/04-redis.yaml
+    - k8s/05-kafka.yaml
+    - k8s/06-backend.yaml
+profiles:
+  - name: dev
+    activation:
+      - command: dev
+    portForward:
+    - resourceType: service
+      resourceName: aetherion-backend-service
+      namespace: aetherion
+      port: 8000
+      localPort: 8000
+    - resourceType: service
+      resourceName: mongo-service
+      namespace: aetherion
+      port: 27017
+      localPort: 27017
+    - resourceType: service
+      resourceName: redis-service
+      namespace: aetherion
+      port: 6379
+      localPort: 6379
+    - resourceType: service
+      resourceName: kafka-service
+      namespace: aetherion
+      port: 9092
+      localPort: 9092 

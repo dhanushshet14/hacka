@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aetherion-backend-service
+  namespace: aetherion
+  labels:
+    app: aetherion-backend
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: http
+  selector:
+    app: aetherion-backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aetherion-backend
+  namespace: aetherion
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aetherion-backend
+  template:
+    metadata:
+      labels:
+        app: aetherion-backend
+    spec:
+      containers:
+      - name: aetherion-backend
+        image: aetherion-backend:latest
+        imagePullPolicy: IfNotPresent  # Use Always for production with proper registry
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+        envFrom:
+        - configMapRef:
+            name: aetherion-config
+        - secretRef:
+            name: aetherion-secrets
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: chromadb-data
+          mountPath: /app/data/chromadb
+      volumes:
+      - name: chromadb-data
+        persistentVolumeClaim:
+          claimName: chromadb-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: chromadb-pvc
+  namespace: aetherion
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aetherion-ingress
+  namespace: aetherion
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  rules:
+  - host: api.aetherion-ar.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: aetherion-backend-service
+            port:
+              number: 8000 

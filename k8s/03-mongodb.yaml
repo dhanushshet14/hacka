@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service
+  namespace: aetherion
+  labels:
+    app: mongo
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  selector:
+    app: mongo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: aetherion
+spec:
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:6.0
+        ports:
+        - containerPort: 27017
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+          requests:
+            memory: "500Mi"
+            cpu: "250m"
+        volumeMounts:
+        - name: mongo-data
+          mountPath: /data/db
+      volumes:
+      - name: mongo-data
+        persistentVolumeClaim:
+          claimName: mongo-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+  namespace: aetherion
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi 
