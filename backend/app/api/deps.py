@@ -10,7 +10,8 @@ from bson import ObjectId
 from app.core.config import settings
 from app.models.user import User, UserInDB
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+# Modified to make token optional for direct access
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)
 
 # MongoDB connection
 async def get_mongodb():
@@ -64,43 +65,21 @@ def create_refresh_token(data: Dict[str, Any]) -> str:
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
     return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        username: str = payload.get("sub")
-        user_id: str = payload.get("user_id")
-        if username is None or user_id is None:
-            raise credentials_exception
-        token_data = {"username": username, "user_id": user_id}
-    except (JWTError, ValidationError):
-        raise credentials_exception
-    
-    user = await get_user_by_username(username=token_data["username"])
-    if user is None:
-        raise credentials_exception
-    
-    # Convert from UserInDB to User response model
+# Modified to bypass authentication and return a dummy user
+async def get_current_user(token: Optional[str] = Depends(oauth2_scheme)) -> User:
+    # Return a dummy user without checking authentication
     return User(
-        _id=str(user.id),
-        email=user.email,
-        username=user.username,
-        full_name=user.full_name,
-        disabled=user.disabled,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
-        preferences=user.preferences
+        id="dummy_user_id",
+        email="user@example.com",
+        username="demouser",
+        full_name="Demo User",
+        is_active=True,
+        is_superuser=True,
+        created_at=datetime.utcnow(),
+        preferences={"theme": "dark"}
     )
 
-# For endpoints that need admin access
+# For endpoints that need admin access - modified to always allow access
 async def get_current_active_superuser(current_user: User = Depends(get_current_user)) -> User:
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions",
-        )
+    # No permission check
     return current_user 

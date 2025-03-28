@@ -10,6 +10,7 @@ from loguru import logger
 import asyncio
 from typing import List
 
+# Import settings directly from config
 from app.core.config import settings
 from app.db import init_mongodb, init_redis
 
